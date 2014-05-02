@@ -23,6 +23,7 @@
 
 #include "crypto/Random.h"
 #include "crypto/SymmetricCipher.h"
+#include "crypto/SymmetricCipherGcrypt.h"
 
 namespace KeepassHttpProtocol
 {
@@ -68,7 +69,7 @@ static QString encode64(QByteArray b)
     return QString::fromAscii(b.toBase64());
 }
 
-static QByteArray decrypt2(const QByteArray & data, SymmetricCipher & cipher)
+static QByteArray decrypt2(const QByteArray & data, SymmetricCipherGcrypt & cipher)
 {
     //Ensure we get full blocks only
     if (data.length() <= 0 || data.length() % cipher.blockSize())
@@ -83,12 +84,12 @@ static QByteArray decrypt2(const QByteArray & data, SymmetricCipher & cipher)
     return buffer;
 }
 
-static QString decrypt(const QString &data, SymmetricCipher &cipher)
+static QString decrypt(const QString &data, SymmetricCipherGcrypt & cipher)
 {
     return QString::fromUtf8(decrypt2(decode64(data), cipher));
 }
 
-static QByteArray encrypt2(const QByteArray & data, SymmetricCipher & cipher)
+static QByteArray encrypt2(const QByteArray & data, SymmetricCipherGcrypt & cipher)
 {
     //Add PKCS#7 padding
     const int blockSize = cipher.blockSize();
@@ -101,7 +102,7 @@ static QByteArray encrypt2(const QByteArray & data, SymmetricCipher & cipher)
     return buffer;
 }
 
-static QString encrypt(const QString & data, SymmetricCipher & cipher)
+static QString encrypt(const QString & data, SymmetricCipherGcrypt & cipher)
 {
     return encode64(encrypt2(data.toUtf8(), cipher));
 }
@@ -111,8 +112,10 @@ static QString encrypt(const QString & data, SymmetricCipher & cipher)
 /// Request
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-Request::Request(): m_requestType(INVALID)
-{
+Request::Request(): 
+    m_requestType(INVALID),
+    m_cipher(SymmetricCipher::Aes256, SymmetricCipher::Cbc, SymmetricCipher::Decrypt)
+{             
 }
 
 QString Request::nonce() const
@@ -248,9 +251,11 @@ void Request::setRequestType(const QString &requestType)
 
 bool Request::CheckVerifier(const QString &key) const
 {
-    Q_ASSERT(!m_cipher.isValid());
-    m_cipher.init(SymmetricCipher::Aes256, SymmetricCipher::Cbc, SymmetricCipher::Decrypt,
-                  decode64(key), decode64(m_nonce));
+    Q_ASSERT(!m_cipher.isValid()); 
+
+    m_cipher.setKey(decode64(key));
+    m_cipher.setIv(decode64(m_nonce));
+
     return decrypt(m_verifier, m_cipher) == m_nonce;
 }
 
@@ -272,19 +277,21 @@ bool Request::fromJson(QString text)
 /// Response
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-Response::Response(const Request &request, QString hash):
-    m_requestType(request.requestTypeStr()),
+Response::Response(const Request &request, QString hash):    
+    m_requestType(request.requestTypeStr()),    
     m_success(false),
     m_count(-1),
     m_version(STR_VERSION),
-    m_hash(hash)
+    m_hash(hash),
+    m_cipher(SymmetricCipher::Aes256, SymmetricCipher::Cbc, SymmetricCipher::Encrypt)
 {
 }
 
 void Response::setVerifier(QString key)
 {
-    Q_ASSERT(!m_cipher.isValid());
-    m_cipher.init(SymmetricCipher::Aes256, SymmetricCipher::Cbc, SymmetricCipher::Encrypt, decode64(key));
+    Q_ASSERT(!m_cipher.isValid());    
+
+     m_cipher.setKey(decode64(key));
 
     //Generate new IV
     const QByteArray iv = randomGen()->randomArray(m_cipher.blockSize());

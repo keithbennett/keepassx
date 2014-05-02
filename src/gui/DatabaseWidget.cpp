@@ -29,6 +29,7 @@
 #include "autotype/AutoType.h"
 #include "core/Config.h"
 #include "core/FilePath.h"
+#include "core/Group.h"
 #include "core/Metadata.h"
 #include "core/Tools.h"
 #include "gui/ChangeMasterKeyWidget.h"
@@ -215,7 +216,26 @@ void DatabaseWidget::createEntry()
     m_newEntry->setUuid(Uuid::random());
     m_newEntry->setUsername(m_db->metadata()->defaultUserName());
     m_newParent = m_groupView->currentGroup();
+    setIconFromParent();
     switchToEntryEdit(m_newEntry, true);
+}
+
+void DatabaseWidget::setIconFromParent()
+{
+    if (!config()->get("UseGroupIconOnEntryCreation").toBool()) {
+        return;
+    }
+
+    if (m_newParent->iconNumber() == Group::DefaultIconNumber && m_newParent->iconUuid().isNull()) {
+        return;
+    }
+
+    if (m_newParent->iconUuid().isNull()) {
+        m_newEntry->setIcon(m_newParent->iconNumber());
+    }
+    else {
+        m_newEntry->setIcon(m_newParent->iconUuid());
+    }
 }
 
 void DatabaseWidget::cloneEntry()
@@ -593,12 +613,24 @@ void DatabaseWidget::entryActivationSignalReceived(Entry* entry, EntryModel::Mod
 
 void DatabaseWidget::switchToEntryEdit()
 {
-    switchToEntryEdit(m_entryView->currentEntry(), false);
+    Entry* entry = m_entryView->currentEntry();
+    Q_ASSERT(entry);
+    if (!entry) {
+        return;
+    }
+
+    switchToEntryEdit(entry, false);
 }
 
 void DatabaseWidget::switchToGroupEdit()
 {
-    switchToGroupEdit(m_groupView->currentGroup(), false);
+    Group* group = m_groupView->currentGroup();
+    Q_ASSERT(group);
+    if (!group) {
+        return;
+    }
+
+    switchToGroupEdit(group, false);
 }
 
 void DatabaseWidget::switchToMasterKeyChange()

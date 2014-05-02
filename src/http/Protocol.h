@@ -18,7 +18,7 @@
 #include <QtCore/QCryptographicHash>
 #include <QtCore/QMetaType>
 #include <QtCore/QVariant>
-#include "crypto/SymmetricCipher.h"
+#include "crypto/SymmetricCipherGcrypt.h"
 
 namespace KeepassHttpProtocol {
 
@@ -96,7 +96,7 @@ private:
     QString m_verifier;
     QString m_nonce;
     QString m_realm;
-    mutable SymmetricCipher m_cipher;
+    mutable SymmetricCipherGcrypt m_cipher;
 };
 
 class StringField : public QObject
@@ -200,7 +200,7 @@ private:
     QList<Entry> m_entries;
     QString m_nonce;
     QString m_verifier;
-    SymmetricCipher m_cipher;
+    mutable SymmetricCipherGcrypt m_cipher;
 };
 
 }/*namespace KeepassHttpProtocol*/

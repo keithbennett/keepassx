@@ -23,12 +23,14 @@
 #include "autotype/AutoTypePlatformPlugin.h"
 #include "autotype/AutoTypeSelectDialog.h"
 #include "autotype/WildcardMatcher.h"
+#include "core/Config.h"
 #include "core/Database.h"
 #include "core/Entry.h"
 #include "core/FilePath.h"
 #include "core/Group.h"
 #include "core/ListDeleter.h"
 #include "core/Tools.h"
+#include "gui/MessageBox.h"
 
 AutoType* AutoType::m_instance = Q_NULLPTR;
 
@@ -40,6 +42,7 @@ AutoType::AutoType(QObject* parent, bool test)
     , m_pluginLoader(new QPluginLoader(this))
     , m_plugin(Q_NULLPTR)
     , m_executor(Q_NULLPTR)
+    , m_windowFromGlobal(0)
 {
     // prevent crash when the plugin has unresolved symbols
     m_pluginLoader->setLoadHints(QLibrary::ResolveAllSymbolsHint);
@@ -187,8 +190,10 @@ void AutoType::performGlobalAutoType(const QList<Database*>& dbList)
 
     if (entryList.isEmpty()) {
         m_inAutoType = false;
+        MessageBox::information(Q_NULLPTR, tr("Auto-Type - KeePassX"),
+                                tr("Couldn't find an entry that matches the window title."));
     }
-    else if (entryList.size() == 1) {
+    else if ((entryList.size() == 1) && !config()->get("security/autotypeask").toBool()) {
         m_inAutoType = false;
         performAutoType(entryList.first(), Q_NULLPTR, sequenceHash[entryList.first()]);
     }

@@ -49,6 +49,8 @@ SettingsWidget::SettingsWidget(QWidget* parent)
     , m_generalWidget(new QWidget())
     , m_secUi(new Ui::SettingsWidgetSecurity())
     , m_generalUi(new Ui::SettingsWidgetGeneral())
+    , m_globalAutoTypeKey(static_cast<Qt::Key>(0))
+    , m_globalAutoTypeModifiers(Qt::NoModifier)
 {
     setHeadline(tr("Application Settings"));
 
@@ -93,6 +95,7 @@ void SettingsWidget::loadSettings()
     m_generalUi->autoSaveAfterEveryChangeCheckBox->setChecked(config()->get("AutoSaveAfterEveryChange").toBool());
     m_generalUi->autoSaveOnExitCheckBox->setChecked(config()->get("AutoSaveOnExit").toBool());
     m_generalUi->minimizeOnCopyCheckBox->setChecked(config()->get("MinimizeOnCopy").toBool());
+    m_generalUi->useGroupIconOnEntryCreationCheckBox->setChecked(config()->get("UseGroupIconOnEntryCreation").toBool());
     m_generalUi->reloadBehavior->setCurrentIndex(config()->get("ReloadBehavior").toInt());
 
     if (autoType()->isAvailable()) {
@@ -111,9 +114,9 @@ void SettingsWidget::loadSettings()
 
     m_secUi->passwordCleartextCheckBox->setChecked(config()->get("security/passwordscleartext").toBool());
 
+    m_secUi->autoTypeAskCheckBox->setChecked(config()->get("security/autotypeask").toBool());
     Q_FOREACH (const ExtraPage& page, m_extraPages)
         page.loadSettings();
-
     setCurrentRow(0);
 }
 
@@ -128,6 +131,8 @@ void SettingsWidget::saveSettings()
                   m_generalUi->autoSaveAfterEveryChangeCheckBox->isChecked());
     config()->set("AutoSaveOnExit", m_generalUi->autoSaveOnExitCheckBox->isChecked());
     config()->set("MinimizeOnCopy", m_generalUi->minimizeOnCopyCheckBox->isChecked());
+    config()->set("UseGroupIconOnEntryCreation",
+                  m_generalUi->useGroupIconOnEntryCreationCheckBox->isChecked());
     config()->set("ReloadBehavior", m_generalUi->reloadBehavior->currentIndex());
     if (autoType()->isAvailable()) {
         config()->set("GlobalAutoTypeKey", m_generalUi->autoTypeShortcutWidget->key());
@@ -142,6 +147,7 @@ void SettingsWidget::saveSettings()
 
     config()->set("security/passwordscleartext", m_secUi->passwordCleartextCheckBox->isChecked());
 
+    config()->set("security/autotypeask", m_secUi->autoTypeAskCheckBox->isChecked());
     Q_FOREACH (const ExtraPage& page, m_extraPages)
         page.saveSettings();
 
